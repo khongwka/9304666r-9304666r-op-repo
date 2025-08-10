@@ -11,7 +11,7 @@ pipeline {
 
         stage('Op-9304666r-S2') {
             steps {
-                echo 'Op-S1-9304666r-S2: Checking on whether QA server is running after update'
+                echo 'Op-9304666r-S2: Checking on whether QA server is running after update'
                 /* TODO: add real commands here */
             }
         }
@@ -25,14 +25,14 @@ pipeline {
 
         stage('Op-9304666r-S4') {
             steps {
-                echo 'Op-S1-9304666r-S4: prod web server is backup and updated'
+                echo 'Op-9304666r-S4: prod web server is backup and updated'
                 /* TODO: add real commands here */
             }
         }
 
         stage('Op-9304666r-S5') {
             steps {
-                echo 'Op-S1-9304666r-S5: Checking on whether Prod server is running after update'
+                echo 'Op-9304666r-S5: Checking on whether Prod server is running after update'
                 /* TODO: add real commands here */
             }
         }
@@ -46,7 +46,7 @@ pipeline {
 
         stage('Op-9304666r-S7') {
             steps {
-                Echo 'Op-S1-9304666r-S7: Prod web server is monitored and ready to serve.'
+                Echo 'Op-9304666r-S7: Prod web server is monitored and ready to serve.'
                 /* TODO: add real commands here */
             }
         }
@@ -58,6 +58,7 @@ pipeline {
         }
     }
 }
+
 
 
 
