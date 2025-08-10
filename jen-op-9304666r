@@ -1,0 +1,60 @@
+pipeline {
+    agent any          /* or label 'your-agent-label' */
+
+    stages {
+        stage('Op-9304666r-S1') {
+            steps {
+                echo 'Running Op-9304666r-S1'
+                /* TODO: add real commands here */
+            }
+        }
+
+        stage('Op-9304666r-S2') {
+            steps {
+                echo 'Running Op-9304666r-S2'
+                /* TODO: add real commands here */
+            }
+        }
+
+        stage('Op-9304666r-S3') {
+            steps {
+                echo 'Running Op-9304666r-S3'
+                /* TODO: add real commands here */
+            }
+        }
+
+        stage('Op-9304666r-S4') {
+            steps {
+                echo 'Running Op-9304666r-S4'
+                /* TODO: add real commands here */
+            }
+        }
+
+        stage('Op-9304666r-S5') {
+            steps {
+                echo 'Running Op-9304666r-S5'
+                /* TODO: add real commands here */
+            }
+        }
+
+        stage('Op-9304666r-S6') {
+            steps {
+                echo 'Running Op-9304666r-S6'
+                /* TODO: add real commands here */
+            }
+        }
+
+        stage('Op-9304666r-S7') {
+            steps {
+                echo 'Running Op-9304666r-S7'
+                /* TODO: add real commands here */
+            }
+        }
+    }
+
+    post {
+        always {
+            echo '9304666r-operate-pipeline finished'
+        }
+    }
+}
