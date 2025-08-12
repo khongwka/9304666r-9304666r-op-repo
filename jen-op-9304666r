@@ -69,9 +69,10 @@ pipeline {
                             --network qa-net \
                             --ip 192.168.100.110 \
                             --publish 33200:80 \
-                            qa-bkup-image
+                            qa-bkup-image \
+                            bash -c "service apache2 start && tail -f /dev/null"
                           docker start 9304666r-qa-svr
-                          timeout 30 bash -c 'until curl -s http://localhost:33200 > /dev/null; do sleep 1; done'
+                          timeout 60 bash -c 'until curl -s http://localhost:33200 > /dev/null; do sleep 1; done'
                         '''
                         error('Aborting pipeline')
                     }
@@ -146,9 +147,10 @@ pipeline {
                             --network qa-net \
                             --ip 192.168.100.220 \
                             --publish 33500:80 \
-                            prod-bkup-image
+                            prod-bkup-image \
+                            bash -c "service apache2 start && tail -f /dev/null"
                           docker start 9304666r-prod-svr
-                          timeout 30 bash -c 'until curl -s http://localhost:33500 > /dev/null; do sleep 1; done'
+                          timeout 60 bash -c 'until curl -s http://localhost:33500 > /dev/null; do sleep 1; done'
                         '''
                         error('Aborting pipeline')
                     }
