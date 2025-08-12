@@ -45,11 +45,17 @@ pipeline {
         stage('Op-9304666r-S3') {
             steps {
                 script {
-                    def qaOK = sh(
-                      script: 'grep -q "HTTP/1.1 200 OK" qa-result-file',
-                      returnStatus: true
+                    def proceed = input(
+                        id: 'qaProceed',
+                        message: 'QA server returned 200 OK. Proceed to Prod rollout?',
+                        ok: 'Proceed',
+                        parameters: [
+                            choice(name: 'CHOICE',
+                                   choices: ['Proceed', 'Rollback'],
+                                   description: 'Choose action for QA server')
+                        ]
                     )
-                    if (qaOK == 0) {
+                    if (proceed == 'Proceed') {
                         echo 'Op-9304666r-S3: Proceed to roll out to Prod server'
                     } else {
                         echo 'Op-9304666r-S3: QA server fails after update and is rolled back'
@@ -103,11 +109,17 @@ pipeline {
         stage('Op-9304666r-S6') {
             steps {
                 script {
-                    def prodOK = sh(
-                      script: 'grep -q "HTTP/1.1 200 OK" prod-result-file',
-                      returnStatus: true
+                    def proceed = input(
+                        id: 'prodProceed',
+                        message: 'Prod server returned 200 OK. Release to production?',
+                        ok: 'Proceed',
+                        parameters: [
+                            choice(name: 'CHOICE',
+                                   choices: ['Proceed', 'Rollback'],
+                                   description: 'Choose action for Prod server')
+                        ]
                     )
-                    if (prodOK == 0) {
+                    if (proceed == 'Proceed') {
                         echo 'Op-9304666r-S6: Proceed to release Prod web server to production'
                     } else {
                         echo 'Op-9304666r-S6: Prod web server is rolled back'
