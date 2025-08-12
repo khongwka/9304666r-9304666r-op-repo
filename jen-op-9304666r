@@ -7,6 +7,7 @@ pipeline {
             steps {
                 echo 'Op-9304666r-S1: QA web server is backup and updated'
                 sh '''
+                  docker start 9304666r-qa-svr || true
                   docker rmi -f qa-bkup-image 2>/dev/null || true
                   docker commit 9304666r-qa-svr qa-bkup-image
 
@@ -34,6 +35,7 @@ pipeline {
         stage('Op-9304666r-S2') {
             steps {
                 sh '''
+                  docker start 9304666r-qa-svr || true
                   curl -Is http://localhost:33200 | head -n 1 > qa-result-file
                   cat qa-result-file | grep -q "HTTP/1.1 200 OK" || { echo "QA server not responding"; exit 1; }
                 '''
@@ -60,6 +62,7 @@ pipeline {
                     } else {
                         echo 'Op-9304666r-S3: QA server fails after update and is rolled back'
                         sh '''
+                          docker stop 9304666r-qa-svr
                           docker rm -f 9304666r-qa-svr
                           docker run -d --name 9304666r-qa-svr \
                             --hostname 9304666r-qa-svr.localdomain \
@@ -67,6 +70,8 @@ pipeline {
                             --ip 192.168.100.110 \
                             --publish 33200:80 \
                             qa-bkup-image
+                          docker start 9304666r-qa-svr
+                          timeout 30 bash -c 'until curl -s http://localhost:33200 > /dev/null; do sleep 1; done'
                         '''
                         error('Aborting pipeline')
                     }
@@ -79,6 +84,7 @@ pipeline {
             steps {
                 echo 'Op-9304666r-S4: prod web server is backup and updated'
                 sh '''
+                  docker start 9304666r-prod-svr || true
                   docker rmi -f prod-bkup-image 2>/dev/null || true
                   docker commit 9304666r-prod-svr prod-bkup-image
 
@@ -106,6 +112,7 @@ pipeline {
         stage('Op-9304666r-S5') {
             steps {
                 sh '''
+                  docker start 9304666r-prod-svr || true
                   curl -Is http://localhost:33500 | head -n 1 > prod-result-file
                   cat prod-result-file | grep -q "HTTP/1.1 200 OK" || { echo "Prod server not responding"; exit 1; }
                 '''
@@ -132,6 +139,7 @@ pipeline {
                     } else {
                         echo 'Op-9304666r-S6: Prod web server is rolled back'
                         sh '''
+                          docker stop 9304666r-prod-svr
                           docker rm -f 9304666r-prod-svr
                           docker run -d --name 9304666r-prod-svr \
                             --hostname 9304666r-prod-svr.localdomain \
@@ -139,6 +147,8 @@ pipeline {
                             --ip 192.168.100.220 \
                             --publish 33500:80 \
                             prod-bkup-image
+                          docker start 9304666r-prod-svr
+                          timeout 30 bash -c 'until curl -s http://localhost:33500 > /dev/null; do sleep 1; done'
                         '''
                         error('Aborting pipeline')
                     }
