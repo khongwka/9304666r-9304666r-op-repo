@@ -1,53 +1,132 @@
 pipeline {
-    agent any          /* or label 'your-agent-label' */
+    agent any
 
     stages {
+        /* ---------- S1 ---------- */
         stage('Op-9304666r-S1') {
             steps {
-                echo 'Op-S1-9304666r: QA web server is backup and updated'
-                /* TODO: add real commands here */
+                echo 'Op-9304666r-S1: QA web server is backup and updated'
+                sh '''
+                  # Remove old QA backup image, create new one
+                  docker rmi -f qa-bkup-image 2>/dev/null || true
+                  docker commit 9304666r-qa-svr qa-bkup-image
+
+                  # Ensure Apache & Puppet inside QA container
+                  docker exec -u root 9304666r-qa-svr bash -c "
+                    apt-get update -qq &&
+                    apt-get install -y wget apache2 &&
+                    wget -q https://apt.puppetlabs.com/puppet-release-bionic.deb &&
+                    dpkg -i puppet-release-bionic.deb &&
+                    apt-get update -qq &&
+                    apt-get install -y puppet-agent
+                  "
+
+                  # Copy new index and run Puppet tasks
+                  docker cp index-op-9304666r.html 9304666r-qa-svr:/tmp/
+                  docker exec -u root 9304666r-qa-svr /opt/puppetlabs/bin/puppet apply -e \
+                    'package { \"apache2\": ensure => installed } -> service { \"apache2\": ensure => running, enable => true }'
+                  docker exec -u root 9304666r-qa-svr /opt/puppetlabs/bin/puppet apply -e \
+                    'file { \"/operate\": ensure => directory } -> file { \"/operate/9304666r\": ensure => directory }'
+                  docker exec -u root 9304666r-qa-svr /opt/puppetlabs/bin/puppet apply -e \
+                    'file { \"/var/www/html/index.html\": source => \"/tmp/index-op-9304666r.html\", ensure => file }'
+                '''
             }
         }
 
+        /* ---------- S2 ---------- */
         stage('Op-9304666r-S2') {
             steps {
+                sh '''
+                  curl -Is http://localhost:33200 | head -n 1 > /tmp/qa-result-file
+                  cat /tmp/qa-result-file | grep -q "HTTP/1.1 200 OK" || \
+                    { echo "QA server not responding"; exit 1; }
+                '''
                 echo 'Op-9304666r-S2: Checking on whether QA server is running after update'
-                /* TODO: add real commands here */
             }
         }
 
+        /* ---------- S3 ---------- */
         stage('Op-9304666r-S3') {
             steps {
-                echo 'Running Op-9304666r-S3'
-                /* TODO: add real commands here */
+                script {
+                    def qaOK = sh(
+                      script: 'grep -q "HTTP/1.1 200 OK" /tmp/qa-result-file',
+                      returnStatus: true
+                    )
+                    if (qaOK == 0) {
+                        echo 'Op-9304666r-S3: Proceed to roll out to Prod server'
+                    } else {
+                        echo 'Op-9304666r-S3: QA server fails after update and is rolled back'
+                        sh 'docker stop 9304666r-qa-svr && docker run -d --name 9304666r-qa-svr --hostname 9304666r-qa-svr.localdomain --network qa-net --ip 192.168.100.110 --publish 33200:80 qa-bkup-image'
+                        error('Aborting pipeline')
+                    }
+                }
             }
         }
 
+        /* ---------- S4 ---------- */
         stage('Op-9304666r-S4') {
             steps {
                 echo 'Op-9304666r-S4: prod web server is backup and updated'
-                /* TODO: add real commands here */
+                sh '''
+                  docker rmi -f prod-bkup-image 2>/dev/null || true
+                  docker commit 9304666r-prod-svr prod-bkup-image
+
+                  docker exec -u root 9304666r-prod-svr bash -c "
+                    apt-get update -qq &&
+                    apt-get install -y wget apache2 &&
+                    wget -q https://apt.puppetlabs.com/puppet-release-bionic.deb &&
+                    dpkg -i puppet-release-bionic.deb &&
+                    apt-get update -qq &&
+                    apt-get install -y puppet-agent
+                  "
+
+                  docker cp index-op-9304666r.html 9304666r-prod-svr:/tmp/
+                  docker exec -u root 9304666r-prod-svr /opt/puppetlabs/bin/puppet apply -e \
+                    'package { \"apache2\": ensure => installed } -> service { \"apache2\": ensure => running, enable => true }'
+                  docker exec -u root 9304666r-prod-svr /opt/puppetlabs/bin/puppet apply -e \
+                    'file { \"/operate\": ensure => directory } -> file { \"/operate/9304666r\": ensure => directory }'
+                  docker exec -u root 9304666r-prod-svr /opt/puppetlabs/bin/puppet apply -e \
+                    'file { \"/var/www/html/index.html\": source => \"/tmp/index-op-9304666r.html\", ensure => file }'
+                '''
             }
         }
 
+        /* ---------- S5 ---------- */
         stage('Op-9304666r-S5') {
             steps {
+                sh '''
+                  curl -Is http://localhost:33500 | head -n 1 > /tmp/prod-result-file
+                  cat /tmp/prod-result-file | grep -q "HTTP/1.1 200 OK" || \
+                    { echo "Prod server not responding"; exit 1; }
+                '''
                 echo 'Op-9304666r-S5: Checking on whether Prod server is running after update'
-                /* TODO: add real commands here */
             }
         }
 
+        /* ---------- S6 ---------- */
         stage('Op-9304666r-S6') {
             steps {
-                echo 'Running Op-9304666r-S6'
-                /* TODO: add real commands here */
+                script {
+                    def prodOK = sh(
+                      script: 'grep -q "HTTP/1.1 200 OK" /tmp/prod-result-file',
+                      returnStatus: true
+                    )
+                    if (prodOK == 0) {
+                        echo 'Op-9304666r-S6: Proceed to release Prod web server to production'
+                    } else {
+                        echo 'Op-9304666r-S6: Prod web server is rolled back'
+                        sh 'docker stop 9304666r-prod-svr && docker run -d --name 9304666r-prod-svr --hostname 9304666r-prod-svr.localdomain --network qa-net --ip 192.168.100.220 --publish 33500:80 prod-bkup-image'
+                        error('Aborting pipeline')
+                    }
+                }
             }
         }
 
+        /* ---------- S7 ---------- */
         stage('Op-9304666r-S7') {
             steps {
                 echo 'Op-9304666r-S7: Prod web server is monitored and ready to serve.'
-                /* TODO: add real commands here */
             }
         }
     }
@@ -58,8 +137,3 @@ pipeline {
         }
     }
 }
-
-
-
-
-
