@@ -7,11 +7,9 @@ pipeline {
             steps {
                 echo 'Op-9304666r-S1: QA web server is backup and updated'
                 sh '''
-                  # Remove old QA backup image, create new one
                   docker rmi -f qa-bkup-image 2>/dev/null || true
                   docker commit 9304666r-qa-svr qa-bkup-image
 
-                  # Ensure Apache & Puppet inside QA container
                   docker exec -u root 9304666r-qa-svr bash -c "
                     apt-get update -qq &&
                     apt-get install -y wget apache2 &&
@@ -21,7 +19,6 @@ pipeline {
                     apt-get install -y puppet-agent
                   "
 
-                  # Copy new index and run Puppet tasks
                   docker cp index-op-9304666r.html 9304666r-qa-svr:/tmp/
                   docker exec -u root 9304666r-qa-svr /opt/puppetlabs/bin/puppet apply -e \
                     'package { \"apache2\": ensure => installed } -> service { \"apache2\": ensure => running, enable => true }'
@@ -37,8 +34,8 @@ pipeline {
         stage('Op-9304666r-S2') {
             steps {
                 sh '''
-                curl -Is http://localhost:33200 | head -n 1 > qa-result-file
-                cat qa-result-file | grep -q "HTTP/1.1 200 OK" || { echo "QA server not responding"; exit 1; }
+                  curl -Is http://localhost:33200 | head -n 1 > qa-result-file
+                  cat qa-result-file | grep -q "HTTP/1.1 200 OK" || { echo "QA server not responding"; exit 1; }
                 '''
                 echo 'Op-9304666r-S2: Checking on whether QA server is running after update'
             }
@@ -49,7 +46,7 @@ pipeline {
             steps {
                 script {
                     def qaOK = sh(
-                      script: 'grep -q "HTTP/1.1 200 OK" /tmp/qa-result-file',
+                      script: 'grep -q "HTTP/1.1 200 OK" qa-result-file',
                       returnStatus: true
                     )
                     if (qaOK == 0) {
@@ -95,8 +92,8 @@ pipeline {
         stage('Op-9304666r-S5') {
             steps {
                 sh '''
-                curl -Is http://localhost:33500 | head -n 1 > prod-result-file
-                cat prod-result-file | grep -q "HTTP/1.1 200 OK" || { echo "Prod server not responding"; exit 1; }
+                  curl -Is http://localhost:33500 | head -n 1 > prod-result-file
+                  cat prod-result-file | grep -q "HTTP/1.1 200 OK" || { echo "Prod server not responding"; exit 1; }
                 '''
                 echo 'Op-9304666r-S5: Checking on whether Prod server is running after update'
             }
@@ -107,7 +104,7 @@ pipeline {
             steps {
                 script {
                     def prodOK = sh(
-                      script: 'grep -q "HTTP/1.1 200 OK" /tmp/prod-result-file',
+                      script: 'grep -q "HTTP/1.1 200 OK" prod-result-file',
                       returnStatus: true
                     )
                     if (prodOK == 0) {
