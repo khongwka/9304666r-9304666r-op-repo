@@ -37,9 +37,8 @@ pipeline {
         stage('Op-9304666r-S2') {
             steps {
                 sh '''
-                  curl -Is http://localhost:33200 | head -n 1 > /tmp/qa-result-file
-                  cat /tmp/qa-result-file | grep -q "HTTP/1.1 200 OK" || \
-                    { echo "QA server not responding"; exit 1; }
+                curl -Is http://localhost:33200 | head -n 1 > qa-result-file
+                cat qa-result-file | grep -q "HTTP/1.1 200 OK" || { echo "QA server not responding"; exit 1; }
                 '''
                 echo 'Op-9304666r-S2: Checking on whether QA server is running after update'
             }
@@ -96,9 +95,8 @@ pipeline {
         stage('Op-9304666r-S5') {
             steps {
                 sh '''
-                  curl -Is http://localhost:33500 | head -n 1 > /tmp/prod-result-file
-                  cat /tmp/prod-result-file | grep -q "HTTP/1.1 200 OK" || \
-                    { echo "Prod server not responding"; exit 1; }
+                curl -Is http://localhost:33500 | head -n 1 > prod-result-file
+                cat prod-result-file | grep -q "HTTP/1.1 200 OK" || { echo "Prod server not responding"; exit 1; }
                 '''
                 echo 'Op-9304666r-S5: Checking on whether Prod server is running after update'
             }
