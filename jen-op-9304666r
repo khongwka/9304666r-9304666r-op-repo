@@ -59,7 +59,15 @@ pipeline {
                         echo 'Op-9304666r-S3: Proceed to roll out to Prod server'
                     } else {
                         echo 'Op-9304666r-S3: QA server fails after update and is rolled back'
-                        sh 'docker stop 9304666r-qa-svr && docker run -d --name 9304666r-qa-svr --hostname 9304666r-qa-svr.localdomain --network qa-net --ip 192.168.100.110 --publish 33200:80 qa-bkup-image'
+                        sh '''
+                          docker rm -f 9304666r-qa-svr
+                          docker run -d --name 9304666r-qa-svr \
+                            --hostname 9304666r-qa-svr.localdomain \
+                            --network qa-net \
+                            --ip 192.168.100.110 \
+                            --publish 33200:80 \
+                            qa-bkup-image
+                        '''
                         error('Aborting pipeline')
                     }
                 }
@@ -123,7 +131,15 @@ pipeline {
                         echo 'Op-9304666r-S6: Proceed to release Prod web server to production'
                     } else {
                         echo 'Op-9304666r-S6: Prod web server is rolled back'
-                        sh 'docker stop 9304666r-prod-svr && docker run -d --name 9304666r-prod-svr --hostname 9304666r-prod-svr.localdomain --network qa-net --ip 192.168.100.220 --publish 33500:80 prod-bkup-image'
+                        sh '''
+                          docker rm -f 9304666r-prod-svr
+                          docker run -d --name 9304666r-prod-svr \
+                            --hostname 9304666r-prod-svr.localdomain \
+                            --network qa-net \
+                            --ip 192.168.100.220 \
+                            --publish 33500:80 \
+                            prod-bkup-image
+                        '''
                         error('Aborting pipeline')
                     }
                 }
