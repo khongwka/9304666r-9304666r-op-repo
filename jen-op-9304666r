@@ -72,7 +72,7 @@ pipeline {
   --ip 192.168.100.110 \
   -p 33200:80 \
   qa-bkup-image \
-  bash -c "apache2ctl -D FOREGROUND"
+  bash -c 'apache2ctl -D FOREGROUND'
 
 timeout 90 bash -c '
   until curl -Is http://localhost:33200 | grep -q "HTTP/1.1 200 OK"; do
@@ -184,4 +184,5 @@ timeout 90 bash -c '
         }
     }
 }
+
 
