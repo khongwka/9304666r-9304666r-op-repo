@@ -33,19 +33,17 @@ pipeline {
 
         /* ---------- S2 ---------- */
         stage('Op-9304666r-S2') {
-    steps {
-        sh '''
-          docker start 9304666r-qa-svr || true
-          # Get the primary IP address of the host (first IP)
-          HOST_IP=$(hostname -I | awk '{print $1}')
-          echo "Using host IP: $HOST_IP"
-          # Curl using host IP instead of localhost
-          curl -Is http://$HOST_IP:33200 | head -n 1 > qa-result-file
-          cat qa-result-file | grep -q "HTTP/1.1 200 OK" || { echo "QA server not responding"; exit 1; }
-        '''
-        echo 'Op-9304666r-S2: Checking on whether QA server is running after update'
-    }
-}
+            steps {
+                sh '''
+                  docker start 9304666r-qa-svr || true
+                  HOST_IP=$(hostname -I | awk '{print $1}')
+                  echo "Using host IP: $HOST_IP"
+                  curl -Is http://$HOST_IP:33200 | head -n 1 > qa-result-file
+                  cat qa-result-file | grep -q "HTTP/1.1 200 OK" || { echo "QA server not responding"; exit 1; }
+                '''
+                echo 'Op-9304666r-S2: Checking on whether QA server is running after update'
+            }
+        }
 
         /* ---------- S3 ---------- */
         stage('Op-9304666r-S3') {
@@ -66,21 +64,21 @@ pipeline {
                     } else {
                         echo 'Op-9304666r-S3: QA server fails after update and is rolled back'
                         sh '''
-  docker stop 9304666r-qa-svr || true
-  docker rm -f 9304666r-qa-svr || true
-  docker run -d --name 9304666r-qa-svr \
-    --hostname 9304666r-qa-svr.localdomain \
-    --network qa-net \
-    --ip 192.168.100.110 \
-    -p 33200:80 \
-    qa-bkup-image \
-    bash -c "apache2ctl -D FOREGROUND"
-  
-  timeout 90 bash -c 'until curl -Is http://localhost:33200 | grep -q "HTTP/1.1 200 OK"; do
-    echo "Waiting for QA rollback server..."
-    sleep 3
-  done'
-'''
+                          docker stop 9304666r-qa-svr || true
+                          docker rm -f 9304666r-qa-svr || true
+                          docker run -d --name 9304666r-qa-svr \
+                            --hostname 9304666r-qa-svr.localdomain \
+                            --network qa-net \
+                            --ip 192.168.100.110 \
+                            -p 33200:80 \
+                            qa-bkup-image \
+                            bash -c "apache2ctl -D FOREGROUND"
+
+                          timeout 90 bash -c 'until curl -Is http://localhost:33200 | grep -q "HTTP/1.1 200 OK"; do
+                            echo "Waiting for QA rollback server..."
+                            sleep 3
+                          done'
+                        '''
                         error('Aborting pipeline')
                     }
                 }
@@ -121,7 +119,9 @@ pipeline {
             steps {
                 sh '''
                   docker start 9304666r-prod-svr || true
-                  curl -Is http://localhost:33500 | head -n 1 > prod-result-file
+                  HOST_IP=$(hostname -I | awk '{print $1}')
+                  echo "Using host IP: $HOST_IP"
+                  curl -Is http://$HOST_IP:33500 | head -n 1 > prod-result-file
                   cat prod-result-file | grep -q "HTTP/1.1 200 OK" || { echo "Prod server not responding"; exit 1; }
                 '''
                 echo 'Op-9304666r-S5: Checking on whether Prod server is running after update'
@@ -147,17 +147,20 @@ pipeline {
                     } else {
                         echo 'Op-9304666r-S6: Prod web server is rolled back'
                         sh '''
-                          docker stop 9304666r-prod-svr
-                          docker rm -f 9304666r-prod-svr
+                          docker stop 9304666r-prod-svr || true
+                          docker rm -f 9304666r-prod-svr || true
                           docker run -d --name 9304666r-prod-svr \
                             --hostname 9304666r-prod-svr.localdomain \
                             --network qa-net \
                             --ip 192.168.100.220 \
                             -p 33500:80 \
                             prod-bkup-image \
-                            apache2ctl -D FOREGROUND
-                          docker start 9304666r-prod-svr
-                          timeout 60 bash -c 'until curl -s http://localhost:33500 > /dev/null; do sleep 1; done'
+                            bash -c "apache2ctl -D FOREGROUND"
+
+                          timeout 90 bash -c 'until curl -Is http://localhost:33500 | grep -q "HTTP/1.1 200 OK"; do
+                            echo "Waiting for Prod rollback server..."
+                            sleep 3
+                          done'
                         '''
                         error('Aborting pipeline')
                     }
@@ -179,5 +182,3 @@ pipeline {
         }
     }
 }
-
-
