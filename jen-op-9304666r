@@ -33,15 +33,19 @@ pipeline {
 
         /* ---------- S2 ---------- */
         stage('Op-9304666r-S2') {
-            steps {
-                sh '''
-                  docker start 9304666r-qa-svr || true
-                  curl -Is http://localhost:33200 | head -n 1 > qa-result-file
-                  cat qa-result-file | grep -q "HTTP/1.1 200 OK" || { echo "QA server not responding"; exit 1; }
-                '''
-                echo 'Op-9304666r-S2: Checking on whether QA server is running after update'
-            }
-        }
+    steps {
+        sh '''
+          docker start 9304666r-qa-svr || true
+          # Get the primary IP address of the host (first IP)
+          HOST_IP=$(hostname -I | awk '{print $1}')
+          echo "Using host IP: $HOST_IP"
+          # Curl using host IP instead of localhost
+          curl -Is http://$HOST_IP:33200 | head -n 1 > qa-result-file
+          cat qa-result-file | grep -q "HTTP/1.1 200 OK" || { echo "QA server not responding"; exit 1; }
+        '''
+        echo 'Op-9304666r-S2: Checking on whether QA server is running after update'
+    }
+}
 
         /* ---------- S3 ---------- */
         stage('Op-9304666r-S3') {
@@ -172,3 +176,4 @@ pipeline {
         }
     }
 }
+
