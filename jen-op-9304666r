@@ -67,19 +67,19 @@ pipeline {
                           docker stop 9304666r-qa-svr || true
                           docker rm -f 9304666r-qa-svr || true
                           docker run -d --name 9304666r-qa-svr \
-                            --hostname 9304666r-qa-svr.localdomain \
-                            --network qa-net \
-                            --ip 192.168.100.110 \
-                            -p 33200:80 \
-                            qa-bkup-image \
-                            bash -c "apache2ctl -D FOREGROUND"
+  --hostname 9304666r-qa-svr.localdomain \
+  --network qa-net \
+  --ip 192.168.100.110 \
+  -p 33200:80 \
+  qa-bkup-image \
+  bash -c "apache2ctl -D FOREGROUND"
 
-                          timeout 90 bash -c '
-                            until curl -Is http://localhost:33200 | grep -q "HTTP/1.1 200 OK"; do
-                              echo "$(date) Waiting for QA rollback server..."
-                              sleep 3
-                            done
-                          '
+timeout 90 bash -c '
+  until curl -Is http://localhost:33200 | grep -q "HTTP/1.1 200 OK"; do
+    echo "$(date) Waiting for QA rollback server..."
+    sleep 3
+  done
+'
                         '''
                         error('Aborting pipeline')
                     }
@@ -184,3 +184,4 @@ pipeline {
         }
     }
 }
+
