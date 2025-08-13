@@ -47,45 +47,39 @@ pipeline {
 
         /* ---------- S3 ---------- */
         stage('Op-9304666r-S3') {
-            steps {
-                script {
-                    def proceed = input(
-                        id: 'qaProceed',
-                        message: 'QA server returned 200 OK. Proceed to Prod rollout?',
-                        ok: 'Proceed',
-                        parameters: [
-                            choice(name: 'CHOICE',
-                                   choices: ['Proceed', 'Rollback'],
-                                   description: 'Choose action for QA server')
-                        ]
-                    )
-                    if (proceed == 'Proceed') {
-                        echo 'Op-9304666r-S3: Proceed to roll out to Prod server'
-                    } else {
-                        echo 'Op-9304666r-S3: QA server fails after update and is rolled back'
-                        sh '''
-                          docker stop 9304666r-qa-svr || true
-                          docker rm -f 9304666r-qa-svr || true
-                          docker run -d --name 9304666r-qa-svr \
-  --hostname 9304666r-qa-svr.localdomain \
-  --network qa-net \
-  --ip 192.168.100.110 \
-  -p 33200:80 \
-  qa-bkup-image \
-  bash -c "'apache2ctl -D FOREGROUND'"
+    steps {
+        script {
+            input message: "Approve rollback?", submitter: 'jadmin'
+            echo "Op-9304666r-S3: QA server fails after update and is rolled back"
 
-timeout 90 bash -c '
-  until curl -Is http://localhost:33200 | grep -q "HTTP/1.1 200 OK"; do
-    echo "$(date) Waiting for QA rollback server..."
-    sleep 3
-  done
-'
-                        '''
-                        error('Aborting pipeline')
-                    }
-                }
+            // Stop and remove the existing container
+            sh 'docker stop 9304666r-qa-svr || true'
+            sh 'docker rm -f 9304666r-qa-svr || true'
+
+            // Run the backup image as a new container
+            sh """
+                docker run -d \
+                    --name 9304666r-qa-svr \
+                    --hostname 9304666r-qa-svr.localdomain \
+                    --network qa-net \
+                    --ip 192.168.100.110 \
+                    -p 33200:80 \
+                    qa-bkup-image \
+                    bash -c "echo 'ServerName localhost' >> /etc/apache2/apache2.conf && apache2ctl -D FOREGROUND"
+            """
+
+            // Wait until the container responds with HTTP 200
+            timeout(time: 90, unit: 'SECONDS') {
+                sh """
+                    until curl -Is http://localhost:33200 | grep -q "HTTP/1.1 200 OK"; do
+                        echo "\$(date) Waiting for QA rollback server..."
+                        sleep 3
+                    done
+                """
             }
         }
+    }
+}
 
         /* ---------- S4 ---------- */
         stage('Op-9304666r-S4') {
@@ -184,6 +178,7 @@ timeout 90 bash -c '
         }
     }
 }
+
 
 
 
