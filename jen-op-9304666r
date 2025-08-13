@@ -68,9 +68,9 @@ pipeline {
                             --hostname 9304666r-qa-svr.localdomain \
                             --network qa-net \
                             --ip 192.168.100.110 \
-                            --publish 33200:80 \
+                            -p 33200:80 \
                             qa-bkup-image \
-                            bash -c "service apache2 start && tail -f /dev/null"
+                            apache2ctl -D FOREGROUND
                           docker start 9304666r-qa-svr
                           timeout 60 bash -c 'until curl -s http://localhost:33200 > /dev/null; do sleep 1; done'
                         '''
@@ -146,9 +146,9 @@ pipeline {
                             --hostname 9304666r-prod-svr.localdomain \
                             --network qa-net \
                             --ip 192.168.100.220 \
-                            --publish 33500:80 \
+                            -p 33500:80 \
                             prod-bkup-image \
-                            bash -c "service apache2 start && tail -f /dev/null"
+                            apache2ctl -D FOREGROUND
                           docker start 9304666r-prod-svr
                           timeout 60 bash -c 'until curl -s http://localhost:33500 > /dev/null; do sleep 1; done'
                         '''
@@ -172,4 +172,3 @@ pipeline {
         }
     }
 }
-
