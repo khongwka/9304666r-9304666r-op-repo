@@ -22,11 +22,11 @@ pipeline {
 
                   docker cp index-op-9304666r.html 9304666r-qa-svr:/tmp/
                   docker exec -u root 9304666r-qa-svr /opt/puppetlabs/bin/puppet apply -e \
-                    'package { \"apache2\": ensure => installed } -> service { \"apache2\": ensure => running, enable => true }'
+                    'package { "apache2": ensure => installed } -> service { "apache2": ensure => running, enable => true }'
                   docker exec -u root 9304666r-qa-svr /opt/puppetlabs/bin/puppet apply -e \
-                    'file { \"/operate\": ensure => directory } -> file { \"/operate/9304666r\": ensure => directory }'
+                    'file { "/operate": ensure => directory } -> file { "/operate/9304666r": ensure => directory }'
                   docker exec -u root 9304666r-qa-svr /opt/puppetlabs/bin/puppet apply -e \
-                    'file { \"/var/www/html/index.html\": source => \"/tmp/index-op-9304666r.html\", ensure => file }'
+                    'file { "/var/www/html/index.html": source => "/tmp/index-op-9304666r.html", ensure => file }'
                 '''
             }
         }
@@ -37,7 +37,7 @@ pipeline {
                 sh '''
                   docker start 9304666r-qa-svr || true
                   HOST_IP=$(hostname -I | awk '{print $1}')
-                  echo "Using host IP: $HOST_IP"
+                  echo Using host IP: $HOST_IP
                   curl -Is http://$HOST_IP:33200 | head -n 1 > qa-result-file
                   cat qa-result-file | grep -q "HTTP/1.1 200 OK" || { echo "QA server not responding"; exit 1; }
                 '''
@@ -74,10 +74,12 @@ pipeline {
                             qa-bkup-image \
                             bash -c "apache2ctl -D FOREGROUND"
 
-                          timeout 90 bash -c 'until curl -Is http://localhost:33200 | grep -q "HTTP/1.1 200 OK"; do
-                            echo "Waiting for QA rollback server..."
-                            sleep 3
-                          done'
+                          timeout 90 bash -c '
+                            until curl -Is http://localhost:33200 | grep -q "HTTP/1.1 200 OK"; do
+                              echo "$(date) Waiting for QA rollback server..."
+                              sleep 3
+                            done
+                          '
                         '''
                         error('Aborting pipeline')
                     }
@@ -105,11 +107,11 @@ pipeline {
 
                   docker cp index-op-9304666r.html 9304666r-prod-svr:/tmp/
                   docker exec -u root 9304666r-prod-svr /opt/puppetlabs/bin/puppet apply -e \
-                    'package { \"apache2\": ensure => installed } -> service { \"apache2\": ensure => running, enable => true }'
+                    'package { "apache2": ensure => installed } -> service { "apache2": ensure => running, enable => true }'
                   docker exec -u root 9304666r-prod-svr /opt/puppetlabs/bin/puppet apply -e \
-                    'file { \"/operate\": ensure => directory } -> file { \"/operate/9304666r\": ensure => directory }'
+                    'file { "/operate": ensure => directory } -> file { "/operate/9304666r": ensure => directory }'
                   docker exec -u root 9304666r-prod-svr /opt/puppetlabs/bin/puppet apply -e \
-                    'file { \"/var/www/html/index.html\": source => \"/tmp/index-op-9304666r.html\", ensure => file }'
+                    'file { "/var/www/html/index.html": source => "/tmp/index-op-9304666r.html", ensure => file }'
                 '''
             }
         }
@@ -119,9 +121,7 @@ pipeline {
             steps {
                 sh '''
                   docker start 9304666r-prod-svr || true
-                  HOST_IP=$(hostname -I | awk '{print $1}')
-                  echo "Using host IP: $HOST_IP"
-                  curl -Is http://$HOST_IP:33500 | head -n 1 > prod-result-file
+                  curl -Is http://localhost:33500 | head -n 1 > prod-result-file
                   cat prod-result-file | grep -q "HTTP/1.1 200 OK" || { echo "Prod server not responding"; exit 1; }
                 '''
                 echo 'Op-9304666r-S5: Checking on whether Prod server is running after update'
@@ -157,10 +157,12 @@ pipeline {
                             prod-bkup-image \
                             bash -c "apache2ctl -D FOREGROUND"
 
-                          timeout 90 bash -c 'until curl -Is http://localhost:33500 | grep -q "HTTP/1.1 200 OK"; do
-                            echo "Waiting for Prod rollback server..."
-                            sleep 3
-                          done'
+                          timeout 90 bash -c '
+                            until curl -Is http://localhost:33500 | grep -q "HTTP/1.1 200 OK"; do
+                              echo "$(date) Waiting for Prod rollback server..."
+                              sleep 3
+                            done
+                          '
                         '''
                         error('Aborting pipeline')
                     }
