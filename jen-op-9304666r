@@ -46,17 +46,23 @@ pipeline {
         }
 
         /* ---------- S3 ---------- */
-        stage('Op-9304666r-S3') {
+stage('Op-9304666r-S3') {
     steps {
         script {
-            input message: "Approve rollback?", submitter: 'jadmin'
+            input message: "Approve rollback if QA server fails", ok: "Rollback Approved"
+            
             echo "Op-9304666r-S3: QA server fails after update and is rolled back"
+            
+            // Stop and remove any existing container
+            sh """
+                docker stop 9304666r-qa-svr || true
+                docker rm -f 9304666r-qa-svr || true
 
-            // Stop and remove the existing container
-            sh 'docker stop 9304666r-qa-svr || true'
-            sh 'docker rm -f 9304666r-qa-svr || true'
-
-            // Run the backup image as a new container
+                # Kill any process using port 33200
+                sudo fuser -k 33200/tcp || true
+            """
+            
+            // Run the backup container with apache2 in foreground
             sh """
                 docker run -d \
                     --name 9304666r-qa-svr \
@@ -65,18 +71,18 @@ pipeline {
                     --ip 192.168.100.110 \
                     -p 33200:80 \
                     qa-bkup-image \
-                    bash -c "echo 'ServerName localhost' >> /etc/apache2/apache2.conf && apache2ctl -D FOREGROUND"
+                    bash -c 'apache2ctl -D FOREGROUND'
             """
-
-            // Wait until the container responds with HTTP 200
-            timeout(time: 90, unit: 'SECONDS') {
-                sh """
+            
+            // Wait until QA server responds with HTTP 200 OK
+            sh """
+                timeout 90 bash -c '
                     until curl -Is http://localhost:33200 | grep -q "HTTP/1.1 200 OK"; do
                         echo "\$(date) Waiting for QA rollback server..."
                         sleep 3
                     done
-                """
-            }
+                '
+            """
         }
     }
 }
@@ -178,6 +184,7 @@ pipeline {
         }
     }
 }
+
 
 
 
