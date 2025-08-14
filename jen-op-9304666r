@@ -49,6 +49,16 @@ pipeline {
 stage('Op-9304666r-S3') {
     steps {
         script {
+            echo "=== Current HTML inside QA backup image ==="
+            sh """
+                docker run --rm qa-bkup-image cat /var/www/html/index.html
+            """
+
+            echo "=== New HTML from index-op-9304666r.html ==="
+            sh """
+                cat index-op-9304666r.html
+            """
+
             def userChoice = input(
                 id: 'ProceedOrRollback',
                 message: 'Choose next action:',
@@ -74,6 +84,7 @@ stage('Op-9304666r-S3') {
         }
     }
 }
+
 
 
 
@@ -202,6 +213,7 @@ stage('Op-9304666r-S5') {
         }
     }
 }
+
 
 
 
