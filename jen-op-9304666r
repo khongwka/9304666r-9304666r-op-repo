@@ -1,3 +1,15 @@
+// ===== TEMP DEBUG START =====
+stage('DEBUG-BANNER') {
+    steps {
+        echo '****************************************************'
+        echo '*   TEMP DEBUG: THIS IS THE LATEST Jenkinsfile!    *'
+        echo '*   If you see this, Jenkins is using NEW changes  *'
+        echo '****************************************************'
+        sh 'git rev-parse HEAD || echo "No git commit hash available"'
+    }
+}
+// ===== TEMP DEBUG END =====
+
 pipeline {
     agent any
 
@@ -230,6 +242,7 @@ stage('Op-9304666r-S5') {
         }
     }
 }
+
 
 
 
