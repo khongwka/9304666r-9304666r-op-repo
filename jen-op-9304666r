@@ -110,35 +110,52 @@ stage('Op-9304666r-S3') {
         /* ---------- S5 ---------- */
 stage('Op-9304666r-S5') {
     steps {
-        sh """
-            echo "Op-9304666r-S5: Deploying to Prod server"
-            
-            # Stop and remove existing Prod container if running
-            docker stop ${PROD_NAME} || true
-            docker rm ${PROD_NAME} || true
+        script {
+            sh """
+                echo "Op-9304666r-S5: Starting/Verifying Prod container"
 
-            # Start Prod container on correct port
-            docker run -d --name ${PROD_NAME} -p 33500:80 ${PROD_IMAGE}
+                # If Prod container exists, stop and remove it
+                if docker ps -a --format '{{.Names}}' | grep -qx ${PROD_NAME}; then
+                    echo "Stopping existing Prod container..."
+                    docker stop ${PROD_NAME} || true
+                    docker rm ${PROD_NAME} || true
+                fi
 
-            # Wait briefly to allow startup
-            sleep 5
+                # Start Prod container from backup image
+                echo "Starting Prod container on port 33500..."
+                docker run -d --name ${PROD_NAME} -p 33500:80 ${PROD_BKUP_IMAGE}
 
-            # Check if Prod container is running
-            if ! docker ps --format '{{.Names}}' | grep -x ${PROD_NAME} >/dev/null; then
-                echo "ERROR: Prod container failed to start."
-                exit 1
-            fi
+                # Wait for Prod to respond on HTTP
+                echo "Waiting for Prod to respond on HTTP..."
+                SUCCESS=0
+                for i in {1..10}; do
+                    if curl -s -o /dev/null -w "%{http_code}" http://localhost:33500 | grep -q 200; then
+                        echo "Prod container is up and serving HTTP"
+                        SUCCESS=1
+                        break
+                    fi
+                    echo "Prod not ready yet, retrying in 2s..."
+                    sleep 2
+                done
 
-            echo "Prod container started successfully on port 33500"
+                if [ \$SUCCESS -ne 1 ]; then
+                    echo "ERROR: Prod container failed to start properly on port 33500"
+                    exit 99
+                fi
+            """
 
-            # Verify HTTP response from Prod
-            if ! curl -s -I http://localhost:33500 | grep -q '200 OK'; then
-                echo "ERROR: Prod server is not responding with HTTP 200 OK."
-                exit 1
-            fi
+            // Abort Jenkins pipeline if Prod didn’t start
+            if (sh(returnStatus: true, script: "test -f /tmp/force_abort && exit 99") == 99) {
+                error("Aborting")
+            }
 
-            echo "Prod server is running and responding correctly."
-        """
+            // Only run bolt script if Prod is ready
+            sh """
+                dos2unix 9304666r_script
+                chmod +x 9304666r_script
+                bolt script run 9304666r_script --targets docker://${PROD_NAME}
+            """
+        }
     }
 }
 
@@ -199,6 +216,7 @@ stage('Op-9304666r-S5') {
         }
     }
 }
+
 
 
 
