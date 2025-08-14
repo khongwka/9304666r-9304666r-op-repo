@@ -108,31 +108,40 @@ stage('Op-9304666r-S3') {
         }
 
         /* ---------- S5 ---------- */
-        stage('Op-9304666r-S5') {
+stage('Op-9304666r-S5') {
     steps {
-        script {
-            def userChoice = input(
-                message: "Stage 5: Proceed to Prod update or Rollback Prod server?",
-                parameters: [
-                    choice(name: 'action', choices: ['Proceed', 'Rollback'], description: 'Choose action for Prod')
-                ]
-            )
+        sh """
+            echo "Op-9304666r-S5: Deploying to Prod server"
+            
+            # Stop and remove existing Prod container if running
+            docker stop ${PROD_NAME} || true
+            docker rm ${PROD_NAME} || true
 
-            if (userChoice == 'Rollback') {
-                echo "Op-9304666r-S5: Prod server fails after update and is rolled back"
-                sh """
-                    docker stop ${PROD_NAME} || true
-                    docker rm ${PROD_NAME} || true
-                    docker run -d --name ${PROD_NAME} -p 33400:80 ${PROD_BKUP_IMAGE}
-                """
-                error("Aborting")
-            } else {
-                echo "Op-9304666r-S5: Proceed to Prod deployment"
-                // put your Prod deployment steps here
-            }
-        }
+            # Start Prod container on correct port
+            docker run -d --name ${PROD_NAME} -p 33500:80 ${PROD_IMAGE}
+
+            # Wait briefly to allow startup
+            sleep 5
+
+            # Check if Prod container is running
+            if ! docker ps --format '{{.Names}}' | grep -x ${PROD_NAME} >/dev/null; then
+                echo "ERROR: Prod container failed to start."
+                exit 1
+            fi
+
+            echo "Prod container started successfully on port 33500"
+
+            # Verify HTTP response from Prod
+            if ! curl -s -I http://localhost:33500 | grep -q '200 OK'; then
+                echo "ERROR: Prod server is not responding with HTTP 200 OK."
+                exit 1
+            fi
+
+            echo "Prod server is running and responding correctly."
+        """
     }
 }
+
 
         /* ---------- S6 ---------- */
         stage('Op-9304666r-S6') {
@@ -190,6 +199,7 @@ stage('Op-9304666r-S3') {
         }
     }
 }
+
 
 
 
