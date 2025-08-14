@@ -31,7 +31,7 @@ pipeline {
             }
         }
 
-        /* ---------- S2 ---------- */
+/* ---------- S2 ---------- */
 stage('Op-9304666r-S2') {
     steps {
         sh '''
@@ -45,21 +45,21 @@ stage('Op-9304666r-S2') {
     }
 }
 
-/* ---------- TEMP DEBUG ---------- */
+/* ===== TEMP DEBUG START ===== */
 stage('Debug-S3-Content') {
     steps {
         sh '''
-            echo "==== Showing S3 code from jen-op-9304666r ===="
-            if grep -A 10 "stage('Op-9304666r-S3')" jen-op-9304666r; then
-                echo "==== End of S3 snippet ===="
-            else
-                echo "Pattern not found — dumping full file"
-                cat jen-op-9304666r
-            fi
+            echo "############################################################"
+            echo "###########   DEBUG: READING S3 CODE FROM FILE   ###########"
+            echo "############################################################"
+            grep -A 20 "stage('Op-9304666r-S3')" jen-op-9304666r || echo "[S3 stage not found in file!]"
+            echo "############################################################"
+            echo "###########   END OF DEBUG: S3 CODE ABOVE        ###########"
+            echo "############################################################"
         '''
     }
 }
-/* ---------- END DEBUG ---------- */
+/* ===== TEMP DEBUG END ===== */
 
 /* ---------- S3 ---------- */
 stage('Op-9304666r-S3') {
@@ -106,12 +106,6 @@ stage('Op-9304666r-S3') {
         }
     }
 }
-
-
-
-
-
-
 
         /* ---------- S4 ---------- */
         stage('Op-9304666r-S4') {
@@ -236,6 +230,7 @@ stage('Op-9304666r-S5') {
         }
     }
 }
+
 
 
 
