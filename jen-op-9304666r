@@ -58,20 +58,10 @@ stage('Op-9304666r-S3') {
             )
 
             if (userChoice == 'Proceed') {
-                echo "Op-9304666r-S3: Proceed to roll out to Prod server"
-                
-                // Update QA server with new index file before proceeding
+                echo "Op-9304666r-S3: QA server updated with new content"
                 sh """
                     docker cp index-op-9304666r.html ${QA_NAME}:/var/www/html/index.html
                 """
-
-                // Deploy to Prod server on port 33500
-                sh """
-                    docker stop ${PROD_NAME} || true
-                    docker rm ${PROD_NAME} || true
-                    docker run -d --name ${PROD_NAME} -p 33500:80 ${PROD_IMAGE}
-                """
-
             } else {
                 echo "Op-9304666r-S3: QA server fails after update and is rolled back"
                 sh """
@@ -84,6 +74,7 @@ stage('Op-9304666r-S3') {
         }
     }
 }
+
 
 
 
@@ -210,6 +201,7 @@ stage('Op-9304666r-S5') {
         }
     }
 }
+
 
 
 
