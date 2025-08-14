@@ -67,11 +67,12 @@ stage('Op-9304666r-S3') {
             } else {
                 echo "Op-9304666r-S3: QA server fails after update and is rolled back"
                 sh """
-                    docker stop ${QA_NAME} || true
-                    docker rm ${QA_NAME} || true
-                    docker run -d --name ${QA_NAME} -p 33200:80 ${QA_BKUP_IMAGE}
-                """
-                error("Aborting")
+    echo "Op-9304666r-S3: QA server fails after update and is rolled back"
+    docker stop ${QA_NAME} || true
+    docker rm ${QA_NAME} || true
+    docker run -d --name ${QA_NAME} -p 33200:80 qa-bkup-image
+"""
+error("Aborting")
             }
         }
     }
@@ -201,6 +202,7 @@ stage('Op-9304666r-S5') {
         }
     }
 }
+
 
 
 
