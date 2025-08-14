@@ -31,16 +31,6 @@ pipeline {
             }
         }
 
-
-// ===== TEMPORARY DEBUG START =====
-stage('Debug-S3-Section') {
-    steps {
-        sh 'grep -A 10 "stage(\'Op-9304666r-S3\')" Jenkinsfile'
-    }
-}
-// ===== TEMPORARY DEBUG END =====
-
-
         /* ---------- S2 ---------- */
         stage('Op-9304666r-S2') {
             steps {
@@ -54,6 +44,22 @@ stage('Debug-S3-Section') {
                 echo 'Op-9304666r-S2: Checking on whether QA server is running after update'
             }
         }
+
+
+
+// ===== TEMP DEBUG START =====
+stage('Debug-S3-Content') {
+    steps {
+        sh '''
+            echo "==== Showing S3 code from jen-op-9304666r ===="
+            grep -A 10 "stage('Op-9304666r-S3')" jen-op-9304666r || true
+            echo "==== End of S3 snippet ===="
+        '''
+    }
+}
+// ===== TEMP DEBUG END =====
+
+
 
         /* ---------- S3 ---------- */
 stage('Op-9304666r-S3') {
@@ -230,6 +236,7 @@ stage('Op-9304666r-S5') {
         }
     }
 }
+
 
 
 
