@@ -49,14 +49,14 @@ pipeline {
 stage('Op-9304666r-S3') {
     steps {
         script {
-            echo "=== Current HTML inside QA backup image ==="
+            echo "=== Current HTML inside QA backup image (Rollback content) ==="
             sh """
-                docker run --rm qa-bkup-image cat /var/www/html/index.html
+                docker run --rm qa-bkup-image cat /var/www/html/index.html || echo '[No file found]'
             """
 
-            echo "=== New HTML from index-op-9304666r.html ==="
+            echo "=== New HTML from index-op-9304666r.html (Proceed content) ==="
             sh """
-                cat index-op-9304666r.html
+                cat index-op-9304666r.html || echo '[File not found]'
             """
 
             def userChoice = input(
@@ -79,11 +79,18 @@ stage('Op-9304666r-S3') {
                     docker rm ${QA_NAME} || true
                     docker run -d --name ${QA_NAME} -p 33200:80 qa-bkup-image
                 """
+
+                echo "=== HTML after rollback ==="
+                sh """
+                    docker exec ${QA_NAME} cat /var/www/html/index.html || echo '[No file found after rollback]'
+                """
+
                 error("Aborting")
             }
         }
     }
 }
+
 
 
 
@@ -213,6 +220,7 @@ stage('Op-9304666r-S5') {
         }
     }
 }
+
 
 
 
