@@ -76,13 +76,13 @@ stage('Op-9304666r-S3') {
             
             // Wait until QA server responds with HTTP 200 OK
             sh """
-                timeout 90 bash -c '
-                    until curl -Is http://localhost:33200 | grep -q "HTTP/1.1 200 OK"; do
-                        echo "\$(date) Waiting for QA rollback server..."
-                        sleep 3
-                    done
-                '
-            """
+    echo "Op-9304666r-S3: QA server fails after update and is rolled back"
+    docker stop ${QA_NAME} || true
+    docker rm ${QA_NAME} || true
+    docker run -d --name ${QA_NAME} -p 33200:80 qa-bkup-image
+"""
+error("Aborting")
+
         }
     }
 }
@@ -118,15 +118,30 @@ stage('Op-9304666r-S3') {
 
         /* ---------- S5 ---------- */
         stage('Op-9304666r-S5') {
-            steps {
-                sh '''
-                  docker start 9304666r-prod-svr || true
-                  curl -Is http://localhost:33500 | head -n 1 > prod-result-file
-                  cat prod-result-file | grep -q "HTTP/1.1 200 OK" || { echo "Prod server not responding"; exit 1; }
-                '''
-                echo 'Op-9304666r-S5: Checking on whether Prod server is running after update'
+    steps {
+        script {
+            def userChoice = input(
+                message: "Stage 5: Proceed to Prod update or Rollback Prod server?",
+                parameters: [
+                    choice(name: 'action', choices: ['Proceed', 'Rollback'], description: 'Choose action for Prod')
+                ]
+            )
+
+            if (userChoice == 'Rollback') {
+                echo "Op-9304666r-S5: Prod server fails after update and is rolled back"
+                sh """
+                    docker stop ${PROD_NAME} || true
+                    docker rm ${PROD_NAME} || true
+                    docker run -d --name ${PROD_NAME} -p 33400:80 ${PROD_BKUP_IMAGE}
+                """
+                error("Aborting")
+            } else {
+                echo "Op-9304666r-S5: Proceed to Prod deployment"
+                // put your Prod deployment steps here
             }
         }
+    }
+}
 
         /* ---------- S6 ---------- */
         stage('Op-9304666r-S6') {
@@ -184,6 +199,7 @@ stage('Op-9304666r-S3') {
         }
     }
 }
+
 
 
 
