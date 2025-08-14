@@ -32,36 +32,36 @@ pipeline {
         }
 
         /* ---------- S2 ---------- */
-        stage('Op-9304666r-S2') {
-            steps {
-                sh '''
-                  docker start 9304666r-qa-svr || true
-                  HOST_IP=$(hostname -I | awk '{print $1}')
-                  echo Using host IP: $HOST_IP
-                  curl -Is http://$HOST_IP:33200 | head -n 1 > qa-result-file
-                  cat qa-result-file | grep -q "HTTP/1.1 200 OK" || { echo "QA server not responding"; exit 1; }
-                '''
-                echo 'Op-9304666r-S2: Checking on whether QA server is running after update'
-            }
-        }
+stage('Op-9304666r-S2') {
+    steps {
+        sh '''
+          docker start 9304666r-qa-svr || true
+          HOST_IP=$(hostname -I | awk '{print $1}')
+          echo Using host IP: $HOST_IP
+          curl -Is http://$HOST_IP:33200 | head -n 1 > qa-result-file
+          cat qa-result-file | grep -q "HTTP/1.1 200 OK" || { echo "QA server not responding"; exit 1; }
+        '''
+        echo 'Op-9304666r-S2: Checking on whether QA server is running after update'
+    }
+}
 
-
-
-// ===== TEMP DEBUG START =====
+/* ---------- TEMP DEBUG ---------- */
 stage('Debug-S3-Content') {
     steps {
         sh '''
             echo "==== Showing S3 code from jen-op-9304666r ===="
-            grep -A 10 "stage('Op-9304666r-S3')" jen-op-9304666r || true
-            echo "==== End of S3 snippet ===="
+            if grep -A 10 "stage('Op-9304666r-S3')" jen-op-9304666r; then
+                echo "==== End of S3 snippet ===="
+            else
+                echo "Pattern not found — dumping full file"
+                cat jen-op-9304666r
+            fi
         '''
     }
 }
-// ===== TEMP DEBUG END =====
+/* ---------- END DEBUG ---------- */
 
-
-
-        /* ---------- S3 ---------- */
+/* ---------- S3 ---------- */
 stage('Op-9304666r-S3') {
     steps {
         script {
@@ -236,6 +236,7 @@ stage('Op-9304666r-S5') {
         }
     }
 }
+
 
 
 
