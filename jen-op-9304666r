@@ -58,7 +58,7 @@ stage('Op-9304666r-S3') {
             )
 
             if (userChoice == 'Proceed') {
-                echo "Op-9304666r-S3: QA server updated with new content"
+                echo "Op-9304666r-S3: Proceed – updating QA server with new HTML"
                 sh """
                     docker cp index-op-9304666r.html ${QA_NAME}:/var/www/html/index.html
                 """
@@ -74,6 +74,7 @@ stage('Op-9304666r-S3') {
         }
     }
 }
+
 
 
 
@@ -201,6 +202,7 @@ stage('Op-9304666r-S5') {
         }
     }
 }
+
 
 
 
