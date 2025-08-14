@@ -49,43 +49,34 @@ pipeline {
 stage('Op-9304666r-S3') {
     steps {
         script {
-            input message: "Approve rollback if QA server fails", ok: "Rollback Approved"
-            
-            echo "Op-9304666r-S3: QA server fails after update and is rolled back"
-            
-            // Stop and remove any existing container
-            sh """
-                docker stop 9304666r-qa-svr || true
-                docker rm -f 9304666r-qa-svr || true
+            def userChoice = input(
+                id: 'ProceedOrRollback',
+                message: 'Choose next action:',
+                parameters: [
+                    choice(name: 'ACTION', choices: ['Proceed', 'Rollback'], description: 'Select action for Stage 3')
+                ]
+            )
 
-                # Kill any process using port 33200
-                sudo fuser -k 33200/tcp || true
-            """
-            
-            // Run the backup container with apache2 in foreground
-            sh """
-                docker run -d \
-                    --name 9304666r-qa-svr \
-                    --hostname 9304666r-qa-svr.localdomain \
-                    --network qa-net \
-                    --ip 192.168.100.110 \
-                    -p 33200:80 \
-                    qa-bkup-image \
-                    bash -c 'apache2ctl -D FOREGROUND'
-            """
-            
-            // Wait until QA server responds with HTTP 200 OK
-            sh """
-    echo "Op-9304666r-S3: QA server fails after update and is rolled back"
-    docker stop ${QA_NAME} || true
-    docker rm ${QA_NAME} || true
-    docker run -d --name ${QA_NAME} -p 33200:80 qa-bkup-image
-"""
-error("Aborting")
-
+            if (userChoice == 'Proceed') {
+                echo "Op-9304666r-S3: Proceed to roll out to Prod server"
+                sh """
+                    docker stop ${PROD_NAME} || true
+                    docker rm ${PROD_NAME} || true
+                    docker run -d --name ${PROD_NAME} -p 33400:80 ${PROD_IMAGE}
+                """
+            } else {
+                echo "Op-9304666r-S3: QA server fails after update and is rolled back"
+                sh """
+                    docker stop ${QA_NAME} || true
+                    docker rm ${QA_NAME} || true
+                    docker run -d --name ${QA_NAME} -p 33200:80 ${QA_BKUP_IMAGE}
+                """
+                error("Aborting")
+            }
         }
     }
 }
+
 
         /* ---------- S4 ---------- */
         stage('Op-9304666r-S4') {
@@ -199,6 +190,7 @@ error("Aborting")
         }
     }
 }
+
 
 
 
